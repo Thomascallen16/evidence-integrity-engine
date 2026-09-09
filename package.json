@@ -1,0 +1,16 @@
+{
+  "name": "@thomascallen16/evidence-integrity-engine",
+  "version": "0.1.0",
+  "description": "Provider-neutral evidence integrity primitives for claims, provenance, contradictions, uncertainty, and validation.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^3.0.0"
+  }
+}
