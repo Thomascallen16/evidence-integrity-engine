@@ -1,7 +1,8 @@
-import type {
-  InvestigationResult,
-  ValidationError,
-  ValidationStatus,
+import {
+  investigationClassifications,
+  type InvestigationResult,
+  type ValidationError,
+  type ValidationStatus,
 } from "./types";
 
 export function emptyResult(question: string): InvestigationResult {
@@ -22,11 +23,7 @@ export function emptyResult(question: string): InvestigationResult {
   };
 }
 
-/**
- * Validate the structural integrity of an AI- or application-produced finding.
- * The engine never treats the model as the source of truth. Every referenced
- * evidence ID must belong to the evidence set supplied to the validator.
- */
+/** Validate model/application output without treating the model as truth. */
 export function validateInvestigationResult(
   result: InvestigationResult,
   evidenceIds: Array<number | string>,
@@ -35,6 +32,9 @@ export function validateInvestigationResult(
   const errors: ValidationError[] = [];
 
   result.findings.forEach((finding, findingIndex) => {
+    if (!investigationClassifications.includes(finding.classification)) {
+      throw new Error(`Unsupported investigation classification: ${String(finding.classification)}`);
+    }
     for (const evidenceId of [...finding.supportingEvidenceIds, ...finding.contradictingEvidenceIds]) {
       if (!allowed.has(evidenceId)) {
         errors.push({ findingIndex, evidenceId, reason: "UNAVAILABLE_EVIDENCE" });
