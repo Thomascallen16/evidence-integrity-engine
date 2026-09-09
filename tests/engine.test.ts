@@ -1,43 +1,62 @@
 import { describe, expect, it } from "vitest";
-import { emptyResult, rankEvidence, validateInvestigationResult, type RetrievedEvidence } from "../src/index";
+import { emptyResult, validateInvestigationResult } from "../src/validation";
+import { rankEvidence } from "../src/retrieval";
+import { checkProvenance } from "../src/provenance";
+import { findExplicitContradictions } from "../src/contradictions";
+import type { InvestigationResult, RetrievedEvidence } from "../src/types";
 
-describe("evidence integrity engine", () => {
-  it("returns UNKNOWN when no evidence establishes an answer", () => {
-    const result = emptyResult("What happened?");
-    expect(result.findings[0]?.classification).toBe("UNKNOWN");
-    expect(result.unknowns).toHaveLength(1);
+const evidence = (id: number, content: string): RetrievedEvidence => ({
+  evidenceId: id,
+  sourceId: id,
+  source: { title: `Source ${id}`, recordType: "record", origin: "primary", location: `p.${id}`, provenanceNote: "verified" },
+  label: `Evidence ${id}`,
+  content,
+  locator: `page ${id}`,
+  confidenceStatus: "verified",
+  claimIds: [],
+});
+
+describe("Evidence Integrity Engine", () => {
+  it("returns UNKNOWN when no evidence exists", () => {
+    expect(emptyResult("What happened?").findings[0].classification).toBe("UNKNOWN");
   });
 
-  it("preserves explicit contradictions", () => {
-    const result = {
-      summary: "Conflict",
-      findings: [{
-        classification: "CONTRADICTION" as const,
-        statement: "Sources conflict",
-        supportingEvidenceIds: [1],
-        contradictingEvidenceIds: [2],
-        confidence: "medium",
-        explanation: "The excerpts disagree.",
-        provenance: "Evidence 1 and 2",
-        uncertainty: "The record does not resolve the conflict.",
-      }],
-      contradictions: ["Sources conflict"],
+  it("accepts only evidence IDs supplied to the validator", () => {
+    const result: InvestigationResult = {
+      summary: "Supported",
+      findings: [{ classification: "FACT", statement: "A", supportingEvidenceIds: [1], contradictingEvidenceIds: [], confidence: "high", explanation: "", provenance: "", uncertainty: "" }],
+      contradictions: [],
       unknowns: [],
     };
-    expect(validateInvestigationResult(result, [1, 2]).validationStatus).toBe("CONTRADICTION");
+    expect(validateInvestigationResult(result, [1]).validationStatus).toBe("VALID");
+    expect(() => validateInvestigationResult(result, [2])).toThrow(/unavailable evidence/);
   });
 
-  it("rejects evidence IDs that were not supplied to the validator", () => {
-    const result = emptyResult("Question");
-    result.findings[0]!.supportingEvidenceIds = [99];
-    expect(() => validateInvestigationResult(result, [1])).toThrow(/unavailable evidence/);
+  it("rejects unsupported classifications", () => {
+    const result = { ...emptyResult("Q"), findings: [{ ...emptyResult("Q").findings[0], classification: "NOT_A_CLASSIFICATION" }] } as unknown as InvestigationResult;
+    expect(() => validateInvestigationResult(result, [])).toThrow(/Unsupported investigation classification/);
   });
 
-  it("ranks evidence deterministically from the question", () => {
-    const evidence: RetrievedEvidence[] = [
-      { evidenceId: 1, sourceId: 1, source: { title: "Order", recordType: "order", origin: "Court", location: "court.example", provenanceNote: "Official filing" }, label: "Unrelated", content: "A different topic", locator: null, confidenceStatus: "PRIMARY-RECORD", claimIds: [] },
-      { evidenceId: 2, sourceId: 2, source: { title: "Hearing order", recordType: "order", origin: "Court", location: "court.example", provenanceNote: "Official filing" }, label: "Hearing date", content: "The hearing date is stated here", locator: "p. 4", confidenceStatus: "PRIMARY-RECORD", claimIds: [] },
-    ];
-    expect(rankEvidence("hearing date", evidence)[0]?.evidenceId).toBe(2);
+  it("ranks relevant evidence deterministically", () => {
+    const ranked = rankEvidence("pursuit vehicle", [evidence(1, "unrelated material"), evidence(2, "vehicle pursuit record")]);
+    expect(ranked.map(item => item.evidenceId)).toEqual([2, 1]);
+  });
+
+  it("detects explicit evidence conflicts between findings", () => {
+    const result: InvestigationResult = {
+      summary: "Conflict",
+      findings: [
+        { classification: "FACT", statement: "A", supportingEvidenceIds: [1], contradictingEvidenceIds: [], confidence: "high", explanation: "", provenance: "", uncertainty: "" },
+        { classification: "CLAIM", statement: "B", supportingEvidenceIds: [], contradictingEvidenceIds: [1], confidence: "medium", explanation: "", provenance: "", uncertainty: "" },
+      ],
+      contradictions: [],
+      unknowns: [],
+    };
+    expect(findExplicitContradictions(result)).toHaveLength(1);
+  });
+
+  it("requires traceable provenance fields", () => {
+    expect(checkProvenance(evidence(1, "text")).verified).toBe(true);
+    expect(checkProvenance({ ...evidence(2, ""), locator: null }).verified).toBe(false);
   });
 });
