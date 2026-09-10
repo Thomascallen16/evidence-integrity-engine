@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evidence Integrity Engine — Proof Lab</title>
+  <style>
+    :root { color-scheme: light; --ink:#17202a; --muted:#65707b; --line:#dce2e7; --paper:#fff; --soft:#f5f7f9; --accent:#1d5fd1; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:var(--soft); color:var(--ink); }
+    main { width:min(920px,calc(100% - 32px)); margin:0 auto; padding:44px 0 72px; }
+    .eyebrow { font-size:13px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); }
+    h1 { font-size:clamp(34px,6vw,58px); line-height:1.02; margin:10px 0 14px; letter-spacing:-.04em; }
+    .intro { max-width:680px; color:var(--muted); font-size:18px; line-height:1.55; margin-bottom:28px; }
+    .card { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:24px; box-shadow:0 8px 30px rgba(25,35,45,.05); margin-top:16px; }
+    label { display:block; font-weight:700; margin-bottom:8px; }
+    textarea,input,select { width:100%; border:1px solid #cbd3da; border-radius:11px; padding:13px 14px; font:inherit; color:var(--ink); background:#fff; }
+    textarea { min-height:90px; resize:vertical; }
+    .field { margin-bottom:20px; }
+    .evidence { border:1px solid var(--line); border-radius:14px; padding:16px; margin-top:12px; background:#fbfcfd; }
+    .evidence-head { display:grid; grid-template-columns:1fr 180px; gap:12px; margin-bottom:12px; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+    button { border:0; border-radius:11px; padding:12px 17px; font:inherit; font-weight:750; cursor:pointer; }
+    .primary { background:var(--accent); color:#fff; }
+    .secondary { background:#e9edf1; color:var(--ink); }
+    .link { background:none; color:var(--accent); padding:8px 0; }
+    .result { display:none; }
+    .result.show { display:block; }
+    .classification { font-size:38px; font-weight:850; letter-spacing:-.03em; margin:4px 0 8px; }
+    .explanation { font-size:18px; line-height:1.5; color:var(--muted); }
+    .pill { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:5px 9px; font-size:12px; font-weight:750; }
+    .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    details { margin-top:18px; border-top:1px solid var(--line); padding-top:16px; }
+    summary { cursor:pointer; font-weight:750; }
+    ul { color:var(--muted); line-height:1.6; }
+    .examples { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .example { font-size:13px; }
+    .small { color:var(--muted); font-size:13px; line-height:1.45; }
+    @media (max-width:700px){ .two,.evidence-head{grid-template-columns:1fr;} main{padding-top:28px;} .card{padding:18px;} }
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Evidence Integrity Engine</div>
+  <h1>Proof Lab</h1>
+  <p class="intro">Give the record a question, a statement, and the evidence behind it. The engine will tell you what the record supports — and what it does not.</p>
+
+  <div class="card">
+    <div class="field">
+      <label for="question">What are you trying to verify?</label>
+      <textarea id="question" placeholder="Example: Did the meeting happen on March 4?"></textarea>
+    </div>
+    <div class="field">
+      <label for="claim">What is the statement?</label>
+      <textarea id="claim" placeholder="Example: The meeting happened on March 4."></textarea>
+      <div class="examples">
+        <button class="secondary example" data-example="support">Try supporting evidence</button>
+        <button class="secondary example" data-example="conflict">Try conflicting evidence</button>
+        <button class="secondary example" data-example="unknown">Try incomplete evidence</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Evidence</label>
+      <div id="evidence-list"></div>
+      <button class="secondary" id="add">+ Add evidence</button>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="check">Check the Record</button>
+      <button class="link" id="clear">Clear</button>
+    </div>
+  </div>
+
+  <div class="card result" id="result">
+    <span class="pill" id="status-pill">RESULT</span>
+    <div class="classification" id="classification"></div>
+    <div class="explanation" id="explanation"></div>
+    <details>
+      <summary>Show me how this was determined</summary>
+      <div id="trail"></div>
+    </details>
+  </div>
+
+  <p class="small" style="margin:20px 4px 0">This is a demonstration of evidence classification, not legal advice. The engine does not decide what is true merely because a source exists.</p>
+</main>
+<script>
+const list = document.getElementById('evidence-list');
+const result = document.getElementById('result');
+let count = 0;
+function addEvidence(data={}) {
+  count++;
+  const el=document.createElement('div'); el.className='evidence'; el.dataset.id=count;
+  el.innerHTML=`<div class="evidence-head"><input class="title" placeholder="Source name" value="${escapeHtml(data.title||'')}"><select class="relationship"><option value="SUPPORTING">Supports the statement</option><option value="CONTRARY">Conflicts with the statement</option></select></div><textarea class="text" placeholder="Paste the relevant evidence exactly as it appears in the source">${escapeHtml(data.text||'')}</textarea><input class="locator" style="margin-top:10px" placeholder="Where can someone find it? (optional)" value="${escapeHtml(data.locator||'')}">`;
+  el.querySelector('.relationship').value=data.relationship||'SUPPORTING';
+  list.appendChild(el);
+}
+function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+function examples(kind){
+  document.getElementById('question').value='Did the meeting happen on March 4?';
+  document.getElementById('claim').value='The meeting happened on March 4.';
+  list.innerHTML=''; count=0;
+  if(kind==='support') addEvidence({title:'Official meeting record',text:'Meeting held March 4 at 2:00 PM.',locator:'Page 2',relationship:'SUPPORTING'});
+  if(kind==='conflict') { addEvidence({title:'Official meeting record',text:'Meeting held March 4 at 2:00 PM.',locator:'Page 2',relationship:'SUPPORTING'}); addEvidence({title:'Attendance log',text:'No meeting was held on March 4.',locator:'Page 7',relationship:'CONTRARY'}); }
+  if(kind==='unknown') addEvidence({title:'Unverified statement',text:'Someone said the meeting happened.',locator:'',relationship:'SUPPORTING'});
+}
+document.querySelectorAll('[data-example]').forEach(b=>b.onclick=()=>examples(b.dataset.example));
+document.getElementById('add').onclick=()=>addEvidence();
+function collect(){return [...list.children].map(e=>({title:e.querySelector('.title').value,text:e.querySelector('.text').value,locator:e.querySelector('.locator').value,relationship:e.querySelector('.relationship').value}));}
+function explanation(f){
+  const map={FACT:'The record contains source-backed evidence explicitly supporting the statement, with no unresolved structural problem.',CONTRADICTION:'The record contains evidence supporting the statement and evidence that conflicts with it. The conflict stays visible.',CLAIM:'A statement exists, but the record does not establish supporting evidence for it.',UNKNOWN:'The record is incomplete or structurally unclear, so the engine will not promote the statement.',AUTHORITY:'The record identifies authority, but authority alone does not establish the underlying fact.',INFERENCE:'The result is an inference rather than a directly established fact.',QUESTION:'There is a question to resolve.'};
+  return map[f.classification]||'The record does not establish a stronger conclusion.';
+}
+document.getElementById('check').onclick=async()=>{
+  const payload={question:document.getElementById('question').value,claim:document.getElementById('claim').value,evidence:collect()};
+  const r=await fetch('/api/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const data=await r.json(); if(data.error){alert(data.error);return;}
+  const f=data.finding; result.classList.add('show');
+  document.getElementById('classification').textContent=f.classification;
+  document.getElementById('status-pill').textContent=f.supportsClaim?'SUPPORTED':'NOT ESTABLISHED';
+  document.getElementById('explanation').textContent=explanation(f);
+  document.getElementById('trail').innerHTML=`<ul><li>${f.reasons.length?f.reasons.join('</li><li>'):'No supporting determination was established.'}</li></ul>${f.unknowns.length?`<p><strong>Unresolved:</strong></p><ul><li>${f.unknowns.join('</li><li>')}</li></ul>`:''}${f.missingEvidence.length?`<p><strong>Missing:</strong></p><ul><li>${f.missingEvidence.join('</li><li>')}</li></ul>`:''}`;
+  result.scrollIntoView({behavior:'smooth',block:'start'});
+};
+document.getElementById('clear').onclick=()=>{document.getElementById('question').value='';document.getElementById('claim').value='';list.innerHTML='';count=0;result.classList.remove('show');addEvidence();};
+addEvidence();
+</script>
+</body>
+</html>
