@@ -29,14 +29,13 @@
     .classification { font-size:38px; font-weight:850; letter-spacing:-.03em; margin:4px 0 8px; }
     .explanation { font-size:18px; line-height:1.5; color:var(--muted); }
     .pill { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:5px 9px; font-size:12px; font-weight:750; }
-    .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
     details { margin-top:18px; border-top:1px solid var(--line); padding-top:16px; }
     summary { cursor:pointer; font-weight:750; }
     ul { color:var(--muted); line-height:1.6; }
     .examples { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
     .example { font-size:13px; }
     .small { color:var(--muted); font-size:13px; line-height:1.45; }
-    @media (max-width:700px){ .two,.evidence-head{grid-template-columns:1fr;} main{padding-top:28px;} .card{padding:18px;} }
+    @media (max-width:700px){ .evidence-head{grid-template-columns:1fr;} main{padding-top:28px;} .card{padding:18px;} }
   </style>
 </head>
 <body>
@@ -84,6 +83,7 @@
 
   <p class="small" style="margin:20px 4px 0">This is a demonstration of evidence classification, not legal advice. The engine does not decide what is true merely because a source exists.</p>
 </main>
+<script src="./engine.js"></script>
 <script>
 const list = document.getElementById('evidence-list');
 const result = document.getElementById('result');
@@ -107,20 +107,23 @@ function examples(kind){
 document.querySelectorAll('[data-example]').forEach(b=>b.onclick=()=>examples(b.dataset.example));
 document.getElementById('add').onclick=()=>addEvidence();
 function collect(){return [...list.children].map(e=>({title:e.querySelector('.title').value,text:e.querySelector('.text').value,locator:e.querySelector('.locator').value,relationship:e.querySelector('.relationship').value}));}
-function explanation(f){
-  const map={FACT:'The record contains source-backed evidence explicitly supporting the statement, with no unresolved structural problem.',CONTRADICTION:'The record contains evidence supporting the statement and evidence that conflicts with it. The conflict stays visible.',CLAIM:'A statement exists, but the record does not establish supporting evidence for it.',UNKNOWN:'The record is incomplete or structurally unclear, so the engine will not promote the statement.',AUTHORITY:'The record identifies authority, but authority alone does not establish the underlying fact.',INFERENCE:'The result is an inference rather than a directly established fact.',QUESTION:'There is a question to resolve.'};
-  return map[f.classification]||'The record does not establish a stronger conclusion.';
-}
-document.getElementById('check').onclick=async()=>{
-  const payload={question:document.getElementById('question').value,claim:document.getElementById('claim').value,evidence:collect()};
-  const r=await fetch('/api/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  const data=await r.json(); if(data.error){alert(data.error);return;}
-  const f=data.finding; result.classList.add('show');
-  document.getElementById('classification').textContent=f.classification;
-  document.getElementById('status-pill').textContent=f.supportsClaim?'SUPPORTED':'NOT ESTABLISHED';
-  document.getElementById('explanation').textContent=explanation(f);
-  document.getElementById('trail').innerHTML=`<ul><li>${f.reasons.length?f.reasons.join('</li><li>'):'No supporting determination was established.'}</li></ul>${f.unknowns.length?`<p><strong>Unresolved:</strong></p><ul><li>${f.unknowns.join('</li><li>')}</li></ul>`:''}${f.missingEvidence.length?`<p><strong>Missing:</strong></p><ul><li>${f.missingEvidence.join('</li><li>')}</li></ul>`:''}`;
-  result.scrollIntoView({behavior:'smooth',block:'start'});
+document.getElementById('check').onclick=()=>{
+  try {
+    const body={question:document.getElementById('question').value,claim:document.getElementById('claim').value,evidence:collect()};
+    const items=body.evidence.filter(item=>item && String(item.text||'').trim());
+    const evidence=items.map((item,index)=>({id:`evidence-${index+1}`,sourceId:`source-${index+1}`,exactText:String(item.text).trim(),locator:String(item.locator||'').trim()||undefined}));
+    const sources=evidence.map((item,index)=>({id:item.sourceId,title:String(items[index]?.title||`Source ${index+1}`).trim(),locator:String(items[index]?.locator||'').trim()||undefined,designation:'UNKNOWN'}));
+    const evidenceLinks=evidence.map((item,index)=>({evidenceId:item.id,relationship:items[index]?.relationship==='CONTRARY'?'CONTRARY':'SUPPORTING'}));
+    const input={question:String(body.question||'').trim(),claim:{id:'claim-1',text:String(body.claim||'').trim()},sources,evidence,evidenceLinks};
+    const f=EvidenceIntegrityEngine.evaluateIntegrity(input);
+    result.classList.add('show');
+    document.getElementById('classification').textContent=f.classification;
+    document.getElementById('status-pill').textContent=f.supportsClaim?'SUPPORTED':'NOT ESTABLISHED';
+    const map={FACT:'The record contains source-backed evidence explicitly supporting the statement, with no unresolved structural problem.',CONTRADICTION:'The record contains evidence supporting the statement and evidence that conflicts with it. The conflict stays visible.',CLAIM:'A statement exists, but the record does not establish supporting evidence for it.',UNKNOWN:'The record is incomplete or structurally unclear, so the engine will not promote the statement.',AUTHORITY:'The record identifies authority, but authority alone does not establish the underlying fact.',INFERENCE:'The result is an inference rather than a directly established fact.',QUESTION:'There is a question to resolve.'};
+    document.getElementById('explanation').textContent=map[f.classification]||'The record does not establish a stronger conclusion.';
+    document.getElementById('trail').innerHTML=`<ul><li>${f.reasons.length?f.reasons.map(escapeHtml).join('</li><li>'):'No supporting determination was established.'}</li></ul>${f.unknowns.length?`<p><strong>Unresolved:</strong></p><ul><li>${f.unknowns.map(escapeHtml).join('</li><li>')}</li></ul>`:''}${f.missingEvidence.length?`<p><strong>Missing:</strong></p><ul><li>${f.missingEvidence.map(escapeHtml).join('</li><li>')}</li></ul>`:''}`;
+    result.scrollIntoView({behavior:'smooth',block:'start'});
+  } catch (error) { alert(error instanceof Error ? error.message : 'Something went wrong.'); }
 };
 document.getElementById('clear').onclick=()=>{document.getElementById('question').value='';document.getElementById('claim').value='';list.innerHTML='';count=0;result.classList.remove('show');addEvidence();};
 addEvidence();
