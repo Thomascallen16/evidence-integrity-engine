@@ -1,15 +1,18 @@
 {
-  "name":"evidence-integrity-engine",
-  "private":false,
-  "version":"0.1.0",
-  "packageManager":"pnpm@10",
-  "scripts":{
-    "typecheck":"tsc --noEmit",
-    "test":"vitest run",
-    "start":"node proof-lab/server.mjs"
+  "name": "evidence-integrity-engine",
+  "private": false,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "start": "node proof-lab/server.mjs",
+    "proof-lab:build": "esbuild engine/integrity.ts --bundle --format=iife --global-name=EvidenceIntegrityEngine --outfile=proof-lab/engine.js"
   },
-  "devDependencies":{
-    "typescript":"^5.7.0",
-    "vitest":"^3.0.0"
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   }
 }
