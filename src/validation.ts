@@ -3,7 +3,7 @@ import {
   type InvestigationResult,
   type ValidationError,
   type ValidationStatus,
-} from "./types";
+} from "./types.js";
 
 export function emptyResult(question: string): InvestigationResult {
   return {
