@@ -1,4 +1,4 @@
-import type { RetrievedEvidence } from "./types";
+import type { RetrievedEvidence } from "./types.js";
 
 function questionTokens(question: string): string[] {
   return Array.from(new Set(
