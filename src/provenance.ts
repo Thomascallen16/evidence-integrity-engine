@@ -1,4 +1,4 @@
-import type { RetrievedEvidence } from "./types";
+import type { RetrievedEvidence } from "./types.js";
 
 export type ProvenanceCheck = {
   evidenceId: number | string;
