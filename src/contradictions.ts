@@ -1,4 +1,4 @@
-import type { InvestigationFinding, InvestigationResult, RetrievedEvidence } from "./types";
+import type { InvestigationFinding, InvestigationResult, RetrievedEvidence } from "./types.js";
 
 export type ContradictionPair = {
   leftFindingIndex: number;
