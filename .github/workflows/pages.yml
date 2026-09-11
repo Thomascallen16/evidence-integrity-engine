@@ -15,6 +15,10 @@ permissions:
   pages: write
   id-token: write
 
+# This workflow does not use dependency caching.
+# Explicitly deny Actions cache access to prevent accidental cache use/poisoning.
+cache-mode: none
+
 concurrency:
   group: pages
   cancel-in-progress: true
