@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# This workflow does not use dependency caching.
+# Explicitly deny Actions cache access to prevent accidental cache use/poisoning.
+cache-mode: none
+
 jobs:
   test:
     runs-on: ubuntu-latest
