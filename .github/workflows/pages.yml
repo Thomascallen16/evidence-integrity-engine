@@ -7,7 +7,6 @@ on:
       - "engine/**"
       - "proof-lab/**"
       - "package.json"
-      - "pnpm-lock.yaml"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
