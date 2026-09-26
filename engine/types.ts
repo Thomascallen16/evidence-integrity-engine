@@ -64,6 +64,8 @@ export interface AuditEvent {
   summary: string;
   beforeHash?: string;
   afterHash?: string;
+  previousHash?: string;
+  eventHash?: string;
 }
 
 export interface IntegrityInput {
@@ -74,6 +76,7 @@ export interface IntegrityInput {
   evidenceLinks?: EvidenceLink[];
   verificationRecords?: VerificationRecord[];
   auditEvents?: AuditEvent[];
+  auditAnchorHash?: string;
 }
 
 export interface IntegrityFinding {
