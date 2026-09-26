@@ -4,18 +4,29 @@ import { evaluateIntegrity } from "./integrity";
 const base = {
   question: "Did the record support the claim?",
   claim: { id: "c1", text: "The record supports the claim." },
-  sources: [{ id: "s1", title: "Primary record", designation: "PRIMARY" as const }],
-  evidence: [{ id: "e1", sourceId: "s1", exactText: "Exact preserved source text." }],
+  sources: [{ id: "s1", title: "Primary record", designation: "PRIMARY" as const, locator: "https://example.test/source/1" }],
+  evidence: [{ id: "e1", sourceId: "s1", exactText: "Exact preserved source text.", locator: "page:1,line:1" }],
 };
 const support = { evidenceLinks: [{ evidenceId: "e1", relationship: "SUPPORTING" as const }] };
+const verifiedSupport = {
+  ...support,
+  verificationRecords: [{
+    id: "v1",
+    targetId: "e1",
+    status: "VERIFIED" as const,
+    verifier: "human-review",
+    method: "source-and-context-check",
+    verifiedAt: "2026-01-02T00:00:00Z",
+  }],
+};
 const run = (x = {}) => evaluateIntegrity({ ...base, ...x });
 
 describe("epistemic guardrails", () => {
   it("never promotes source-only records to FACT", () => expect(run({ evidence: [] }).classification).not.toBe("FACT"));
   it("requires an explicit SUPPORTING relationship", () => expect(run().classification).toBe("CLAIM"));
-  it("promotes source-anchored supporting evidence to FACT", () => expect(run(support).classification).toBe("FACT"));
+  it("promotes only fully verified primary-source evidence to FACT", () => expect(run(verifiedSupport).classification).toBe("FACT"));
   it("marks support plus contrary evidence as CONTRADICTION", () => {
-    const r = run({ evidence: [...base.evidence, { id: "e2", sourceId: "s1", exactText: "Contrary" }], evidenceLinks: [{ evidenceId: "e1", relationship: "SUPPORTING" }, { evidenceId: "e2", relationship: "CONTRARY" }] });
+    const r = run({ ...verifiedSupport, evidence: [...base.evidence, { id: "e2", sourceId: "s1", exactText: "Contrary" }], evidenceLinks: [{ evidenceId: "e1", relationship: "SUPPORTING" }, { evidenceId: "e2", relationship: "CONTRARY" }] });
     expect(r.classification).toBe("CONTRADICTION");
     expect(r.supportingEvidenceIds).toEqual(["e1"]);
     expect(r.contraryEvidenceIds).toEqual(["e2"]);
@@ -35,6 +46,9 @@ describe("provenance and structure", () => {
   it("rejects claims referencing absent sources", () => expect(run({ claim: { ...base.claim, sourceIds: ["missing"] }, ...support }).classification).toBe("UNKNOWN"));
   it("rejects claims referencing absent evidence", () => expect(run({ claim: { ...base.claim, evidenceIds: ["missing"] }, ...support }).classification).toBe("UNKNOWN"));
   it("does not treat PRIMARY designation alone as proof", () => expect(run().classification).toBe("CLAIM"));
+  it("does not promote a supporting record without VERIFIED evidence metadata", () => expect(run(support).classification).toBe("CLAIM"));
+  it("requires a source locator for FACT promotion", () => expect(run({ ...verifiedSupport, sources: [{ id: "s1", title: "Primary record", designation: "PRIMARY" }] }).classification).toBe("CLAIM"));
+  it("requires a PRIMARY source for FACT promotion", () => expect(run({ ...verifiedSupport, sources: [{ id: "s1", title: "Secondary record", designation: "SECONDARY", locator: "https://example.test/source/1" }] }).classification).toBe("CLAIM"));
   it("does not treat SECONDARY designation alone as proof", () => expect(run({ sources: [{ id: "s1", title: "Secondary", designation: "SECONDARY" }] }).classification).toBe("CLAIM"));
 });
 
@@ -51,8 +65,8 @@ describe("verification controls", () => {
 
 describe("audit trail controls", () => {
   const audit = { auditEvents: [{ id: "a1", timestamp: "2026-01-01T00:00:00Z", action: "CREATED" as const, entityType: "evidence", entityId: "e1", summary: "Evidence captured." }] };
-  it("accepts a valid chronological audit trail", () => { const r = run({ ...support, ...audit }); expect(r.classification).toBe("FACT"); expect(r.auditIssues).toEqual([]); });
-  it("rejects duplicate audit event ids", () => expect(run({ ...support, auditEvents: [...audit.auditEvents, { ...audit.auditEvents[0], summary: "Duplicate" }] }).classification).toBe("UNKNOWN"));
+  it("accepts a valid chronological audit trail", () => { const r = run({ ...verifiedSupport, ...audit }); expect(r.classification).toBe("FACT"); expect(r.auditIssues).toEqual([]); });
+  it("rejects duplicate audit event ids", () => expect(run({ ...verifiedSupport, auditEvents: [...audit.auditEvents, { ...audit.auditEvents[0], summary: "Duplicate" }] }).classification).toBe("UNKNOWN"));
   it("rejects unknown audit entities", () => expect(run({ ...support, auditEvents: [{ ...audit.auditEvents[0], entityId: "missing" }] }).classification).toBe("UNKNOWN"));
   it("rejects incomplete audit events", () => expect(run({ ...support, auditEvents: [{ ...audit.auditEvents[0], summary: "" }] }).classification).toBe("UNKNOWN"));
   it("rejects backward audit chronology", () => expect(run({ ...support, auditEvents: [audit.auditEvents[0], { id: "a2", timestamp: "2025-12-31T00:00:00Z", action: "UPDATED", entityType: "evidence", entityId: "e1", summary: "Edited" }] }).classification).toBe("UNKNOWN"));
