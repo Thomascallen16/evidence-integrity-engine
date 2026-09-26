@@ -48,7 +48,9 @@ describe("provenance and structure", () => {
   it("does not treat PRIMARY designation alone as proof", () => expect(run().classification).toBe("CLAIM"));
   it("does not promote a supporting record without VERIFIED evidence metadata", () => expect(run(support).classification).toBe("CLAIM"));
   it("requires a source locator for FACT promotion", () => expect(run({ ...verifiedSupport, sources: [{ id: "s1", title: "Primary record", designation: "PRIMARY" }] }).classification).toBe("CLAIM"));
-  it("requires a PRIMARY source for FACT promotion", () => expect(run({ ...verifiedSupport, sources: [{ id: "s1", title: "Secondary record", designation: "SECONDARY", locator: "https://example.test/source/1" }] }).classification).toBe("CLAIM"));
+  it("allows a non-primary source when its provenance and verification are explicit", () => expect(run({ ...verifiedSupport, sources: [{ id: "s1", title: "Secondary record", designation: "SECONDARY", locator: "https://example.test/source/1" }] }).classification).toBe("FACT"));
+  it("rejects malformed VERIFIED records", () => expect(run({ ...support, verificationRecords: [{ id: "v1", targetId: "e1", status: "VERIFIED", verifiedAt: "not-a-date" }] }).classification).toBe("UNKNOWN"));
+  it("rejects VERIFIED records without verifier and method", () => expect(run({ ...support, verificationRecords: [{ id: "v1", targetId: "e1", status: "VERIFIED", verifiedAt: "2026-01-02T00:00:00Z" }] }).classification).toBe("UNKNOWN"));
   it("does not treat SECONDARY designation alone as proof", () => expect(run({ sources: [{ id: "s1", title: "Secondary", designation: "SECONDARY" }] }).classification).toBe("CLAIM"));
 });
 
