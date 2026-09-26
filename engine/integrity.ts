@@ -1,4 +1,5 @@
-import type { AuditEvent, Evidence, EvidenceLink, IntegrityFinding, IntegrityInput, VerificationRecord } from "./types";
+import { assessAuditTrail } from "./audit";
+import type { Evidence, EvidenceLink, IntegrityFinding, IntegrityInput, VerificationRecord } from "./types";
 
 function duplicateIds(ids: string[]) {
   const seen = new Set<string>();
@@ -17,20 +18,6 @@ function linkedEvidence(evidence: Evidence[], links: EvidenceLink[], relationshi
 
 function latestVerification(records: VerificationRecord[], targetId: string) {
   return records.filter((r) => r.targetId === targetId && r.id && r.verifiedAt && r.status).sort((a, b) => String(b.verifiedAt).localeCompare(String(a.verifiedAt)))[0];
-}
-
-function validateAudit(events: AuditEvent[], knownIds: Set<string>) {
-  const issues: string[] = [];
-  const duplicateEventIds = duplicateIds(events.map((e) => e.id));
-  if (duplicateEventIds.length) issues.push(`Duplicate audit event identifier(s): ${duplicateEventIds.join(", ")}.`);
-  for (const event of events) {
-    if (!event.id || !event.timestamp || !event.entityType || !event.entityId || !event.action || !event.summary?.trim()) issues.push(`Audit event ${event.id || "(missing id)"} is structurally incomplete.`);
-    if (event.entityId && !knownIds.has(event.entityId)) issues.push(`Audit event ${event.id} references unknown entity ${event.entityId}.`);
-  }
-  for (let i = 1; i < events.length; i++) {
-    if (String(events[i].timestamp) < String(events[i - 1].timestamp)) { issues.push("Audit events are not in chronological order."); break; }
-  }
-  return issues;
 }
 
 export function evaluateIntegrity(input: IntegrityInput): IntegrityFinding {
@@ -67,7 +54,13 @@ export function evaluateIntegrity(input: IntegrityInput): IntegrityFinding {
   if (claimVerification?.status === "REJECTED") unknowns.push("The claim itself has a latest verification status of REJECTED.");
   if (claimVerification?.status === "NEEDS_REVIEW") unknowns.push("The claim itself is marked NEEDS_REVIEW.");
 
-  auditIssues.push(...validateAudit(audits, knownEntityIds));
+  const auditAssessment = assessAuditTrail(audits);
+  auditIssues.push(...auditAssessment.reasons);
+  for (const event of audits) {
+    if (event.entityId && !knownEntityIds.has(event.entityId)) {
+      auditIssues.push(`Audit event ${event.id} references unknown entity ${event.entityId}.`);
+    }
+  }
   if (auditIssues.length) unknowns.push("The audit trail contains unresolved structural issues.");
 
   const supporting = linkedEvidence(evidence, links, "SUPPORTING"), contrary = linkedEvidence(evidence, links, "CONTRARY");
