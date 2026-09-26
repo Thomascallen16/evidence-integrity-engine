@@ -4,7 +4,7 @@ Provider-neutral deterministic core for source-backed evidence integrity.
 
 ## Non-negotiable rule
 
-A source alone never becomes a `FACT`. A claim is promoted only when source-backed evidence is explicitly linked as `SUPPORTING` and the record has no unresolved structural ambiguity. Supporting plus contrary evidence yields `CONTRADICTION`.
+A source alone never becomes a `FACT`. A claim is promoted only when source-backed evidence is explicitly linked as `SUPPORTING`, anchored to a `PRIMARY` source with a locator, and backed by an explicit `VERIFIED` evidence record containing verifier, method, and timestamp. Structural ambiguity blocks promotion. Supporting plus contrary evidence yields `CONTRADICTION`.
 
 ## Classification
 
