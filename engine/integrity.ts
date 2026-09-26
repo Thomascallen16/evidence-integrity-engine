@@ -71,17 +71,27 @@ export function evaluateIntegrity(input: IntegrityInput): IntegrityFinding {
   if (auditIssues.length) unknowns.push("The audit trail contains unresolved structural issues.");
 
   const supporting = linkedEvidence(evidence, links, "SUPPORTING"), contrary = linkedEvidence(evidence, links, "CONTRARY");
+  const malformedVerificationRecords = verifications.filter((r) =>
+    !r.id?.trim() ||
+    !r.targetId?.trim() ||
+    !r.status ||
+    !r.verifiedAt ||
+    Number.isNaN(Date.parse(r.verifiedAt)) ||
+    (r.status === "VERIFIED" && (!r.verifier?.trim() || !r.method?.trim()))
+  );
+  if (malformedVerificationRecords.length) unknowns.push("One or more verification records are structurally incomplete or contain an invalid timestamp.");
+
   const promotableSupporting = supporting.filter((e) => {
     const source = sources.find((s) => s.id === e.sourceId);
     const verification = latestVerification(verifications, e.id);
     return Boolean(
-      source?.designation === "PRIMARY" &&
-      source.locator?.trim() &&
+      source?.locator?.trim() &&
       e.exactText?.trim() &&
       verification?.status === "VERIFIED" &&
       verification.verifier?.trim() &&
       verification.method?.trim() &&
-      verification.verifiedAt
+      verification.verifiedAt &&
+      !Number.isNaN(Date.parse(verification.verifiedAt))
     );
   });
   const usableSupporting = promotableSupporting.filter((e) => !rejectedEvidenceIds.includes(e.id) && !reviewEvidenceIds.includes(e.id));
@@ -91,7 +101,7 @@ export function evaluateIntegrity(input: IntegrityInput): IntegrityFinding {
   else if (evidence.length) reasons.push("Evidence exists, but no supporting relationship has been established.");
   if (rejectedEvidenceIds.length) reasons.push("Rejected evidence is excluded from support for the claim.");
   if (reviewEvidenceIds.length) reasons.push("Evidence marked NEEDS_REVIEW cannot promote the claim to FACT.");
-  if (supporting.length && promotableSupporting.length === 0) reasons.push("FACT requires a PRIMARY source with a locator and an explicit VERIFIED evidence record containing verifier, method, and timestamp.");
+  if (supporting.length && promotableSupporting.length === 0) reasons.push("FACT requires a source locator and an explicit VERIFIED evidence record containing verifier, method, and timestamp.");
   if (claimVerification?.status === "VERIFIED") reasons.push("The claim has an explicit VERIFIED verification record.");
 
   const base = { supportsClaim: usableSupporting.length > 0, supportingEvidenceIds: supporting.map((e) => e.id), contraryEvidenceIds: contrary.map((e) => e.id), missingEvidence, unknowns, reasons, rejectedEvidenceIds, reviewEvidenceIds, auditIssues };
