@@ -71,13 +71,27 @@ export function evaluateIntegrity(input: IntegrityInput): IntegrityFinding {
   if (auditIssues.length) unknowns.push("The audit trail contains unresolved structural issues.");
 
   const supporting = linkedEvidence(evidence, links, "SUPPORTING"), contrary = linkedEvidence(evidence, links, "CONTRARY");
-  const usableSupporting = supporting.filter((e) => !rejectedEvidenceIds.includes(e.id) && !reviewEvidenceIds.includes(e.id));
+  const promotableSupporting = supporting.filter((e) => {
+    const source = sources.find((s) => s.id === e.sourceId);
+    const verification = latestVerification(verifications, e.id);
+    return Boolean(
+      source?.designation === "PRIMARY" &&
+      source.locator?.trim() &&
+      e.exactText?.trim() &&
+      verification?.status === "VERIFIED" &&
+      verification.verifier?.trim() &&
+      verification.method?.trim() &&
+      verification.verifiedAt
+    );
+  });
+  const usableSupporting = promotableSupporting.filter((e) => !rejectedEvidenceIds.includes(e.id) && !reviewEvidenceIds.includes(e.id));
   if (supporting.length && contrary.length) reasons.push("Supporting and contrary evidence are both present; the conflict remains visible.");
-  else if (supporting.length) reasons.push("At least one source-backed evidence item is explicitly linked as supporting the claim.");
+  else if (supporting.length) reasons.push("At least one evidence item is explicitly linked as supporting the claim, but it does not yet satisfy the FACT provenance and verification gate.");
   else if (contrary.length) reasons.push("Contrary evidence is present, but no supporting relationship has been established.");
   else if (evidence.length) reasons.push("Evidence exists, but no supporting relationship has been established.");
   if (rejectedEvidenceIds.length) reasons.push("Rejected evidence is excluded from support for the claim.");
   if (reviewEvidenceIds.length) reasons.push("Evidence marked NEEDS_REVIEW cannot promote the claim to FACT.");
+  if (supporting.length && promotableSupporting.length === 0) reasons.push("FACT requires a PRIMARY source with a locator and an explicit VERIFIED evidence record containing verifier, method, and timestamp.");
   if (claimVerification?.status === "VERIFIED") reasons.push("The claim has an explicit VERIFIED verification record.");
 
   const base = { supportsClaim: usableSupporting.length > 0, supportingEvidenceIds: supporting.map((e) => e.id), contraryEvidenceIds: contrary.map((e) => e.id), missingEvidence, unknowns, reasons, rejectedEvidenceIds, reviewEvidenceIds, auditIssues };
