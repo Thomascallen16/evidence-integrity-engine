@@ -76,7 +76,6 @@ export interface IntegrityInput {
   evidenceLinks?: EvidenceLink[];
   verificationRecords?: VerificationRecord[];
   auditEvents?: AuditEvent[];
-  auditAnchorHash?: string;
 }
 
 export interface IntegrityFinding {
