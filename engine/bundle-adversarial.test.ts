@@ -37,7 +37,7 @@ async function fixture() {
 describe("bundle adversarial verification", () => {
   it("accepts reordered object keys because canonicalization is key-order independent", async () => {
     const bundle = await fixture();
-    const reordered = JSON.parse(JSON.stringify(bundle, Object.keys(bundle).reverse()));
+    const reordered = {\n      bundleHash: bundle.bundleHash,\n      receipt: bundle.receipt,\n      finding: bundle.finding,\n      input: bundle.input,\n      engineVersion: bundle.engineVersion,\n      createdAt: bundle.createdAt,\n      bundleId: bundle.bundleId,\n      schemaVersion: bundle.schemaVersion,\n    };
     expect((await verifyEvidenceBundle(reordered)).valid).toBe(true);
   });
 
