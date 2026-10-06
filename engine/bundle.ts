@@ -2,6 +2,7 @@ import type { AuditEvent, IntegrityFinding, IntegrityInput } from "./types";
 import type { IntegrityReceipt } from "./receipt";
 import { verifyIntegrityReceipt } from "./receipt";
 import { verifyAuditChain } from "./audit";
+import { evaluateIntegrity } from "./integrity";
 
 export interface EvidenceBundle {
   schemaVersion: "1.0";
@@ -60,6 +61,7 @@ export interface EvidenceBundleVerification {
   valid: boolean;
   receiptValid: boolean;
   auditChainValid: boolean | null;
+  findingValid: boolean;
   reasons: string[];
 }
 
@@ -77,6 +79,15 @@ export async function verifyEvidenceBundle(bundle: EvidenceBundle): Promise<Evid
   const receipt = await verifyIntegrityReceipt(bundle.receipt, bundle.input, bundle.finding);
   reasons.push(...receipt.reasons);
 
+  let findingValid = false;
+  try {
+    const evaluated = evaluateIntegrity(bundle.input);
+    findingValid = stable(evaluated) === stable(bundle.finding);
+    if (!findingValid) reasons.push("Bundle finding does not match a fresh deterministic evaluation of its input.");
+  } catch (error) {
+    reasons.push(`Bundle input cannot be evaluated: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
   let auditChainValid: boolean | null = null;
   if (bundle.input.auditEvents?.length || bundle.auditAnchorHash) {
     if (!bundle.auditAnchorHash) {
@@ -93,6 +104,7 @@ export async function verifyEvidenceBundle(bundle: EvidenceBundle): Promise<Evid
     valid: reasons.length === 0,
     receiptValid: receipt.valid,
     auditChainValid,
+    findingValid,
     reasons: [...new Set(reasons)],
   };
 }
