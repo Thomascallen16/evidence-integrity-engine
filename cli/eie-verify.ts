@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { createEvidenceBundle, verifyEvidenceBundle } from "../engine/bundle";
+import { verifyEvidenceBundle } from "../engine/bundle";
 import type { EvidenceBundle } from "../engine/bundle";
 import { evaluateIntegrity } from "../engine/integrity";
 
