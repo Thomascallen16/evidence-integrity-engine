@@ -65,6 +65,17 @@ The canonical engine remains deterministic and provider-neutral. Optional extens
 
 The roadmap for offline verification, MCP, OpenTelemetry, external anchoring, and additional adapters is documented in [docs/strategic-roadmap.md](docs/strategic-roadmap.md).
 
+### Standalone offline verification
+
+A portable bundle can be checked without contacting the originating application:
+
+```bash
+pnpm install
+pnpm verify -- evidence-bundle.json
+```
+
+The verifier checks the bundle hash, receipt binding, deterministic re-evaluation, provenance status, and audit-chain status when present. See [docs/offline-verifier.md](docs/offline-verifier.md).
+
 ### Integrity boundary
 
 A valid receipt or evidence bundle proves the integrity of the supplied record and the engine evaluation represented by that record. It does **not** independently prove that an external source is authentic or that a claim is true in the world.
