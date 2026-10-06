@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://evidence-integrity-engine.example/schema/evidence-bundle-1.0.json",
+  "title": "Evidence Integrity Engine Evidence Bundle",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "bundleId",
+    "createdAt",
+    "engineVersion",
+    "input",
+    "finding",
+    "receipt",
+    "bundleHash"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "bundleId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "engineVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input": {
+      "type": "object"
+    },
+    "finding": {
+      "type": "object"
+    },
+    "receipt": {
+      "type": "object"
+    },
+    "auditAnchorHash": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bundleHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "additionalProperties": false
+}
