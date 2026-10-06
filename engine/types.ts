@@ -21,6 +21,9 @@ export interface Source {
   designation?: "PRIMARY" | "SECONDARY" | "UNKNOWN";
   version?: string;
   retrievedAt?: string;
+  retrievalMethod?: string;
+  authenticationStatus?: "UNASSESSED" | "AUTHENTICATED" | "UNAUTHENTICATED" | "DISPUTED";
+  provenanceRef?: string;
 }
 
 export interface Evidence {
@@ -30,6 +33,8 @@ export interface Evidence {
   locator?: string;
   capturedAt?: string;
   hash?: string;
+  transformation?: string;
+  provenanceRef?: string;
 }
 
 export interface Claim {

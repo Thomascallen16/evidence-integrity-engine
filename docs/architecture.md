@@ -41,3 +41,24 @@ The engine accepts source verification as an input property from a source adapte
 ## Contradictions
 
 The core contradiction helper detects explicit evidence-ID conflicts between findings. Semantic contradiction detection belongs in an adapter because it requires domain and language reasoning and should never be mistaken for deterministic proof.
+
+## Expansion boundary
+
+The strategic expansion is intentionally layered around the deterministic engine:
+
+```
+Applications / Agents
+        |
+  MCP / SDK / OTel adapters
+        |
+Evidence bundles / receipts / policy / agent events / graph
+        |
+Deterministic EIE core
+        |
+FACT / CLAIM / CONTRADICTION / UNKNOWN
+```
+
+Portable bundles and receipts provide interoperability and independent verification. Policy profiles add assurance requirements but cannot relax the core FACT provenance gate. Agent activity records capture observable events and tool relationships without requiring private model reasoning. Graph queries operate on explicit evidence relationships rather than inventing relationships.
+
+External source retrieval, authentication, storage, model inference, and authorization remain outside the core.
+

@@ -51,3 +51,21 @@ engine/ is the canonical implementation and test surface. The obsolete pre-conso
 ## Direction
 
 EIE is becoming the canonical evidence-verification infrastructure for the ecosystem. MCP should be an adapter around this core, not a replacement for it. Applications remain responsible for authentication, authorization, source acquisition, persistence, UI, and policy.
+
+## Strategic expansion
+
+The canonical engine remains deterministic and provider-neutral. Optional extensions now provide:
+
+- portable integrity decision receipts
+- versioned evidence bundles with independent bundle verification
+- stronger source/evidence provenance metadata
+- deterministic assurance/policy profiles
+- observable agent activity records without private chain-of-thought
+- evidence graph construction and support/contradiction queries
+
+The roadmap for offline verification, MCP, OpenTelemetry, external anchoring, and additional adapters is documented in [docs/strategic-roadmap.md](docs/strategic-roadmap.md).
+
+### Integrity boundary
+
+A valid receipt or evidence bundle proves the integrity of the supplied record and the engine evaluation represented by that record. It does **not** independently prove that an external source is authentic or that a claim is true in the world.
+
